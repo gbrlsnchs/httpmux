@@ -1,0 +1,3 @@
+package httpmux
+
+const All = "*"
