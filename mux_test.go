@@ -28,6 +28,7 @@ func TestNewMultiplexer(t *testing.T) {
 		paramsVals []string
 		subs       []string
 		flag       bool
+		rHeader    [2]string
 		expected   bool
 	}{
 		// #0
@@ -314,12 +315,89 @@ func TestNewMultiplexer(t *testing.T) {
 			subs:       []string{"/{val1:[0-9]+}", "/{val2}"},
 			expected:   false,
 		},
+		// #30
+		{
+			endpoint: "/test/header",
+			method:   http.MethodGet,
+			mux:      New("/test/header").SetHeader("Content-Type", "application/json"),
+			subs:     []string{"/header"},
+			rHeader:  [2]string{"Content-Type", "application/json"},
+			expected: true,
+		},
+		// #31
+		{
+			endpoint: "/test/header",
+			method:   http.MethodGet,
+			mux:      New("/test/header").SetHeader("Content-Type", "application/json"),
+			subs:     []string{"/header"},
+			expected: false,
+		},
+		// #32
+		{
+			endpoint: "/test/header",
+			method:   http.MethodGet,
+			mux:      New("/test/header").SetHeader("Content-Type", "application/json"),
+			subs:     []string{"/header"},
+			rHeader:  [2]string{"Content-Type", "application/xml"},
+			expected: false,
+		},
+		// #33
+		{
+			endpoint: "/test/header",
+			method:   http.MethodGet,
+			mux:      New("/test").SetSubmux(New("/header").SetHeader("Content-Type", "application/json")),
+			subs:     []string{"/header"},
+			rHeader:  [2]string{"Content-Type", "application/json"},
+			expected: true,
+		},
+		// #34
+		{
+			endpoint: "/test/header",
+			method:   http.MethodGet,
+			mux:      New("/test").SetSubmux(New("/header").SetHeader("Content-Type", "application/json")),
+			subs:     []string{"/header"},
+			expected: false,
+		},
+		// #35
+		{
+			endpoint: "/test/header",
+			method:   http.MethodGet,
+			mux:      New("/test").SetSubmux(New("/header").SetHeader("Content-Type", "application/json")),
+			subs:     []string{"/header"},
+			rHeader:  [2]string{"Content-Type", "application/xml"},
+			expected: false,
+		},
+		// #36
+		{
+			endpoint: "/test/header",
+			method:   http.MethodGet,
+			mux: New("/test").SetHeader("Content-Type", "application/xml").
+				SetSubmux(New("/header").SetHeader("Content-Type", "application/json")),
+			subs:     []string{"/header"},
+			rHeader:  [2]string{"Content-Type", "application/json"},
+			expected: true,
+		},
+		// #37
+		{
+			endpoint: "/test/header",
+			method:   http.MethodGet,
+			mux: New("/test").SetHeader("Content-Type", "application/xml").
+				SetSubmux(New("/header").SetHeader("Content-Type", "application/json")),
+			subs:     []string{"/header"},
+			rHeader:  [2]string{"Content-Type", "application/xml"},
+			expected: false,
+		},
 	}
 
 	for i, test := range tests {
 		index := strconv.Itoa(i)
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest(test.method, test.endpoint, nil)
+
+		if test.rHeader[0] != "" && test.rHeader[1] != "" {
+			r.Header.Set(test.rHeader[0], test.rHeader[1])
+		}
+
 		th := &testHandler{handler: func(w http.ResponseWriter, r *http.Request) {
 			for i, p := range test.params {
 				v := r.Context().Value(p)
