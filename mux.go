@@ -2,106 +2,95 @@ package httpmux
 
 import (
 	"context"
-	"errors"
 	"net/http"
-	"path"
 	"regexp"
 	"strings"
 )
 
-// Multiplexer represents an HTTP request mux.
-type Multiplexer interface {
-	http.Handler
-	// Loopkup finds the match for the request.
-	Lookup(*http.Request) (Multiplexer, error)
-	// NewSubmux sets a new submux and returns it.
-	NewSubmux(string) Multiplexer
-	// Path returns the mux's path without the trailing slash and regexps.
-	Path() string
-	// Regexp returns the mux's regexp contained in the path used to build the mux.
-	Regexp() string
-	// SetHandler sets a new handler for the mux.
-	SetHandler(http.Handler, ...string) Multiplexer
-	// SetHeader sets a request header filter.
-	SetHeader(string, string) Multiplexer
-	// SetSubmux sets a new submux.
-	SetSubmux(Multiplexer) Multiplexer
-	// Submux returns a direct child of the caller mux.
-	// If none is found, it returns nil.
-	Submux(string) Multiplexer
+type Mux struct {
+	path     string
+	regexp   string
+	header   http.Header
+	handlers []*Handler
+	children []*Mux
+	dynChild *Mux
+	parent   *Mux
 }
 
-// mux is a Radix Tree node.
-type mux struct {
-	// path works as a Radix Tree node label.
-	path string
-	// regexp holds a pattern to be matched in a dynamic route.
-	regexp string
-	// header holds a map for matching with the request's header.
-	header http.Header
-	// handlerMap holds all handlers to be executed depending on the HTTP method.
-	handlerMap map[string]http.Handler
-	// nodes are all child nodes the mux (node) holds.
-	nodes map[string]Multiplexer
-	// dynNode represents a special child node that holds a dynamic path.
-	// Each mux (or node) can only hold one dynamic path.
-	dynNode Multiplexer
-}
+func New(path string) *Mux {
+	startIndex := strings.IndexByte(path, '/')
+	dynIndex := strings.IndexByte(path, ':')
+	endIndex := strings.IndexByte(path[startIndex+1:], '/')
 
-// New creates a new Multiplexer.
-//
-// If the path passed as parameter has more than one path, i.e.:
-//  httpmux.New("/more/than/one/path")
-// it will automatically be recursively broken into submuxes.
-func New(p string) Multiplexer {
-	spath := strings.Split(strings.TrimPrefix(p, "/"), "/")
+	if endIndex >= 0 {
+		endIndex = endIndex + 1
 
-	m := &mux{}
-
-	if r, p := extRegexp(spath[0]); r != "" {
-		m.regexp = r
-		spath[0] = p
+	} else {
+		endIndex = len(path)
 	}
 
-	m.path = spath[0]
+	regexpIndex := strings.IndexByte(path[dynIndex+1:], ':')
 
-	if len(spath) > 1 {
-		if dynPath(spath[1]) {
-			m.dynNode = New(path.Join(spath[1:]...))
+	if regexpIndex >= 0 {
+		regexpIndex = regexpIndex + 2
 
-			return m
+		if regexpIndex > endIndex {
+			regexpIndex = regexpIndex - endIndex
+		}
+	} else {
+		regexpIndex = endIndex
+	}
+
+	m := &Mux{path: path[startIndex+1 : regexpIndex]}
+
+	if regexpIndex != endIndex {
+		m.regexp = path[regexpIndex+1 : endIndex]
+	}
+
+	if endIndex != len(path) {
+		child := New(path[endIndex:])
+
+		if strings.IndexByte(path[endIndex:], ':') >= 0 {
+			m.dynChild = child
+		} else {
+			m.children = []*Mux{child}
 		}
 
-		if m.nodes == nil {
-			m.nodes = make(map[string]Multiplexer)
-		}
+		child.parent = m
 
-		m.nodes[spath[1]] = New(path.Join(spath[1:]...))
+		return child
 	}
 
 	return m
 }
 
-// Lookup searches for the root mux and all submuxes using a Radix Tree algorithm.
-func (m *mux) Lookup(r *http.Request) (Multiplexer, error) {
-	n := m
-	parentHeader := n.header
-	found := 0
-	p := r.URL.Path
-	spath := strings.Split(strings.TrimPrefix(p, "/"), "/")
-	key := spath[found]
+func (m *Mux) Lookup(r *http.Request) (*Mux, error) {
+	var (
+		n      *Mux
+		header http.Header
+	)
+	startIndex := strings.IndexByte(r.URL.Path, '/')
+	endIndex := strings.IndexByte(r.URL.Path[startIndex+1:], '/')
 
-	// before entering the loop it checks the parent mux,
-	// which is the root of the tree
-	if n.path == key {
-		found = found + 1
+	if endIndex < 0 {
+		endIndex = len(r.URL.Path)
+	} else {
+		endIndex = endIndex + 1
 	}
 
-	if dynPath(n.path) && found == 0 {
-		*r = *r.WithContext(n.ctx(r.Context(), key))
+	if len(m.header) > 0 {
+		header = n.header
+	}
 
-		if n.regexp != "" {
-			match, err := regexp.MatchString(n.regexp, key)
+	if m.path == r.URL.Path[startIndex+1:endIndex] {
+		n = m
+
+		goto walk
+	}
+
+	if i := strings.IndexByte(m.path, ':'); i >= 0 {
+		if m.regexp != "" {
+			match, err := regexp.MatchString(m.regexp, r.URL.Path)
 
 			if err != nil {
 				return nil, err
@@ -112,22 +101,36 @@ func (m *mux) Lookup(r *http.Request) (Multiplexer, error) {
 			}
 		}
 
-		found = found + 1
+		n = m
+		*r = *r.WithContext(n.ctx(r.Context(), r.URL.Path[startIndex+1:endIndex]))
 	}
 
-	for found < len(spath) {
-		key = spath[found]
+walk:
+	startIndex = strings.IndexByte(r.URL.Path[endIndex:], '/') + endIndex
+	endIndex = strings.IndexByte(r.URL.Path[startIndex+1:], '/')
 
-		if n.dynNode != nil {
-			n = n.dynNode.(*mux)
-			*r = *r.WithContext(n.ctx(r.Context(), key))
+	if endIndex < 0 {
+		endIndex = len(r.URL.Path)
+	} else {
+		endIndex = endIndex + startIndex + 1
+	}
 
-			if len(n.header) > 0 {
-				parentHeader = n.header
+	if n != nil && len(r.URL.Path[startIndex+1:endIndex]) > 0 {
+		for _, c := range n.children {
+			if c.path == r.URL.Path[startIndex+1:endIndex] {
+				n = c
+
+				if len(n.header) > 0 {
+					header = n.header
+				}
+
+				goto walk
 			}
+		}
 
-			if n.regexp != "" {
-				match, err := regexp.MatchString(n.regexp, key)
+		if n.dynChild != nil {
+			if n.dynChild.regexp != "" {
+				match, err := regexp.MatchString(n.dynChild.regexp, r.URL.Path[startIndex+1:endIndex])
 
 				if err != nil {
 					return nil, err
@@ -138,28 +141,22 @@ func (m *mux) Lookup(r *http.Request) (Multiplexer, error) {
 				}
 			}
 
-			found = found + 1
-
-			continue
-		}
-
-		if n.nodes[key] != nil {
-			n = n.nodes[key].(*mux)
+			n = n.dynChild
 
 			if len(n.header) > 0 {
-				parentHeader = n.header
+				header = n.header
 			}
 
-			found = found + 1
+			*r = *r.WithContext(n.ctx(r.Context(), r.URL.Path[startIndex+1:endIndex]))
 
-			continue
+			goto walk
 		}
 
 		return nil, nil
 	}
 
-	for k := range parentHeader {
-		if parentHeader.Get(k) != r.Header.Get(k) {
+	for k := range header {
+		if header.Get(k) != r.Header.Get(k) {
 			return nil, nil
 		}
 	}
@@ -167,29 +164,19 @@ func (m *mux) Lookup(r *http.Request) (Multiplexer, error) {
 	return n, nil
 }
 
-// NewSubmux sets a new submux and returns it.
-func (m *mux) NewSubmux(p string) Multiplexer {
-	sm := New(p)
-
-	m.SetSubmux(sm)
-
-	return sm
+func (m *Mux) Parent() *Mux {
+	return m.parent
 }
 
-// Path returns the mux's path without the trailing slash and regexps.
-func (m *mux) Path() string {
-	return m.path
+func (m *Mux) Root() *Mux {
+	for m.parent != nil {
+		return m.parent.Root()
+	}
+
+	return m
 }
 
-// Regexp returns the mux's regexp contained in the path used to build the mux.
-func (m *mux) Regexp() string {
-	return m.regexp
-}
-
-// ServeHTTP calls a handler's ServeHTTP function if:
-// 1) The Lookup function returns a not nil node;
-// 2) The handler function is not nil for the requested HTTP method.
-func (m *mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (m *Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	n, err := m.Lookup(r)
 
 	if err != nil {
@@ -199,45 +186,23 @@ func (m *mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if n != nil {
-		mx, ok := n.(*mux)
+		for _, hndr := range n.handlers {
+			if hndr.method == r.Method {
+				hndr.h.ServeHTTP(w, r)
 
-		if !ok {
-			PanicFunc(errors.New("httpmux: Multiplexer conversion to *mux"))
-		}
-
-		if mx.handlerMap[All] != nil {
-			mx.handlerMap[All].ServeHTTP(w, r)
-
-			return
-		}
-
-		if mx.handlerMap[r.Method] != nil {
-			mx.handlerMap[r.Method].ServeHTTP(w, r)
+				return
+			}
 		}
 	}
 }
 
-// SetHandler sets a new handler for the mux.
-func (m *mux) SetHandler(h http.Handler, methods ...string) Multiplexer {
-	if m.handlerMap == nil {
-		m.handlerMap = make(map[string]http.Handler)
-	}
-
-	if len(methods) == 0 {
-		m.handlerMap[All] = h
-
-		return m
-	}
-
-	for _, method := range methods {
-		m.handlerMap[method] = h
-	}
+func (m *Mux) SetHandler(method string, h http.Handler) *Mux {
+	m.handlers = append(m.handlers, &Handler{h: h, method: method})
 
 	return m
 }
 
-// SetHeader sets a request header filter.
-func (m *mux) SetHeader(k string, v string) Multiplexer {
+func (m *Mux) SetHeader(k string, v string) *Mux {
 	if m.header == nil {
 		m.header = make(http.Header)
 	}
@@ -247,53 +212,22 @@ func (m *mux) SetHeader(k string, v string) Multiplexer {
 	return m
 }
 
-// SetSubmux sets a new submux.
-func (m *mux) SetSubmux(sm Multiplexer) Multiplexer {
-	p := sm.Path()
-
-	if dynPath(p) {
-		m.dynNode = sm
+func (m *Mux) SetSubmux(sm *Mux) *Mux {
+	if i := strings.IndexByte(sm.path, ':'); i >= 0 {
+		m.dynChild = sm
 
 		return m
 	}
 
-	if m.nodes == nil {
-		m.nodes = make(map[string]Multiplexer)
-	}
+	m.children = append(m.children, sm)
 
-	m.nodes[p] = sm
-
-	return m
+	return sm
 }
 
-// Submux returns a direct child of the caller mux.
-// If none is found, it returns nil.
-func (m *mux) Submux(p string) Multiplexer {
-	p = strings.TrimPrefix(p, "/")
-
-	if r, extp := extRegexp(p); r != "" {
-		p = extp
-	}
-
-	if dynPath(p) {
-		return m.dynNode
-	}
-
-	return m.nodes[p]
-}
-
-// ctx builds a context based on an already existent context
-// and resolves its name based on the mux's path.
-func (m *mux) ctx(ctx context.Context, val string) context.Context {
-	ctxName := m.path[1 : len(m.path)-1]
-
-	if i := strings.IndexByte(ctxName, ':'); i >= 0 {
-		ctxName = ctxName[:i]
-	}
-
+func (m *Mux) ctx(ctx context.Context, val string) context.Context {
 	ctx = context.WithValue(
 		ctx,
-		ctxName,
+		m.path[1:],
 		val,
 	)
 
