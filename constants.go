@@ -1,3 +1,0 @@
-package httpmux
-
-const All = "*"

@@ -3,41 +3,36 @@ package httpmux_test
 import (
 	"net/http"
 
-	"github.com/gbrlsnchs/httphandler"
 	"github.com/gbrlsnchs/httpmux"
 )
 
 func Example() {
-	// submuxes
-	authFunc := func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
-		id := r.Context().Value("id")
-
-		return id, nil
+	example := func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
 	}
-	authMux := httpmux.New("/auth").
-		SetHandler(httphandler.New(http.StatusOK, authFunc), http.MethodPost).
-		SetSubmux(httpmux.New("{id:[0-9]+}"))
 
-	userFunc := func(w http.ResponseWriter, r *http.Request) (interface{}, error) {
-		id := r.Context().Value("id")
+	// "/api/auth"
+	authMux := httpmux.NewSubmux("/auth")
 
-		return id, nil
-	}
-	userMux := httpmux.New("/user").
-		SetSubmux(httpmux.New("/{id}"))
+	authMux.HandleFunc(http.MethodPost, example)
 
-	userMux.Submux("/{id}").
-		SetHandler(httphandler.New(http.StatusAccepted, userFunc), http.MethodPost, http.MethodPut)
+	// "/api/user/:id"
+	userIDMux := httpmux.NewSubmux("/:id")
 
-	testFunc := func(w http.ResponseWriter, r *http.Request) (interface{}, error) { return nil, nil }
-	testMux := httpmux.New("/test").
-		SetHandler(httphandler.New(http.StatusCreated, testFunc))
+	userIDMux.HandleFunc(http.MethodGet, example)
+	userIDMux.HandleFunc(http.MethodPost, example)
 
-	// main mux
-	m := httpmux.New("/api").
-		SetSubmux(authMux).
-		SetSubmux(userMux).
-		SetSubmux(testMux)
+	// "/api/user"
+	userMux := httpmux.NewSubmux("/user")
 
-	http.Handle("/", m)
+	userMux.HandleFunc(http.MethodPost, example)
+	userMux.Add(userIDMux)
+
+	// "/api"
+	parentMux := httpmux.New("/api")
+
+	parentMux.Add(authMux)
+	parentMux.Add(userMux)
+
+	http.ListenAndServe("/", parentMux)
 }
