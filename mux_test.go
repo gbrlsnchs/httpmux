@@ -10,50 +10,62 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type testHandler struct {
-	handler func(w http.ResponseWriter, r *http.Request)
-}
-
-func (th *testHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	th.handler(w, r)
-}
-
-func TestMuxLookup(t *testing.T) {
+func TestMux(t *testing.T) {
 	a := assert.New(t)
-
 	tests := []*struct {
-		path               string
-		mux                *Mux
-		expected           bool
-		expectedParams     []string
-		expectedParamsVals []string
+		path           string
+		mux            *Mux
+		submuxes       []string
+		expected       int
+		expectedParams map[string]string
 	}{
+		// #0
 		{
-			path:     "/test",
-			mux:      New("/test"),
-			expected: true,
+			path:     "/foo",
+			mux:      New("foo"),
+			expected: http.StatusOK,
 		},
+		// #1
 		{
-			path:     "/test",
-			mux:      New("/:testing"),
-			expected: true,
+			path:     "/foo",
+			mux:      New("/bar"),
+			expected: http.StatusNotFound,
 		},
+		// #2
 		{
-			path:     "/testing",
-			mux:      New("/test"),
-			expected: false,
+			path:           "/foo/123",
+			mux:            New("/foo/:bar"),
+			expected:       http.StatusOK,
+			expectedParams: map[string]string{"bar": "123"},
 		},
+		// #3
 		{
-			path:               "/123/test",
-			mux:                New("/:testing/test"),
-			expected:           true,
-			expectedParams:     []string{"testing"},
-			expectedParamsVals: []string{"123"},
+			path:           "/foo/123/456",
+			mux:            New("/foo/:bar/:baz"),
+			expected:       http.StatusOK,
+			expectedParams: map[string]string{"bar": "123", "baz": "456"},
 		},
+		// #4
 		{
-			path:     "/testing/123/nope",
-			mux:      New("/testing/:anything"),
-			expected: false,
+			path:           "/foo/123/456",
+			mux:            New("/foo/:bar"),
+			submuxes:       []string{"/:baz"},
+			expected:       http.StatusOK,
+			expectedParams: map[string]string{"bar": "123", "baz": "456"},
+		},
+		// #5
+		{
+			path:           "/foo/123/456",
+			mux:            New("/foo"),
+			submuxes:       []string{"/:bar", "/:baz"},
+			expected:       http.StatusOK,
+			expectedParams: map[string]string{"bar": "123", "baz": "456"},
+		},
+		// #6
+		{
+			path:     "/foo/123",
+			mux:      New("/foo/:bar/:baz"),
+			expected: http.StatusNotFound,
 		},
 	}
 
@@ -62,26 +74,49 @@ func TestMuxLookup(t *testing.T) {
 
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest(http.MethodGet, test.path, nil)
+		hfunc := func(w http.ResponseWriter, r *http.Request) {
+			params, ok := r.Context().Value(Params).(map[string]string)
 
-		flag := false
+			if len(test.expectedParams) > 0 {
+				a.NotNil(params, index)
+				a.True(ok, index)
+			}
 
-		test.mux.SetHandler(
-			http.MethodGet,
-			&testHandler{
-				func(w http.ResponseWriter, r *http.Request) {
-					flag = true
+			for k, v := range test.expectedParams {
+				val := params[k]
 
-					for i := range test.expectedParams {
-						val := r.Context().Value(test.expectedParams[i])
+				a.Exactly(v, val, index)
+			}
 
-						a.Exactly(test.expectedParamsVals[i], val, index)
-					}
-				},
-			},
-		)
+			w.WriteHeader(http.StatusOK)
+		}
 
-		test.mux.Root().ServeHTTP(w, r)
+		var smux *Submux
 
-		a.Exactly(test.expected, flag, index)
+		for i := len(test.submuxes) - 1; i >= 0; i-- {
+			tmp := smux
+			smux = NewSubmux(test.submuxes[i])
+
+			smux.HandleFunc(http.MethodGet, hfunc)
+
+			if tmp == nil {
+				continue
+			}
+
+			smux.Add(tmp)
+		}
+
+		if smux != nil {
+			test.mux.Add(smux)
+		} else {
+			test.mux.HandleFunc(http.MethodGet, hfunc)
+		}
+
+		err := test.mux.Debug()
+
+		a.Nil(err, index)
+
+		test.mux.ServeHTTP(w, r)
+		a.Exactly(test.expected, w.Code, index)
 	}
 }

@@ -3,233 +3,126 @@ package httpmux
 import (
 	"context"
 	"net/http"
-	"regexp"
-	"strings"
+
+	"github.com/gbrlsnchs/patricia"
 )
 
+// Mux is an HTTP multiplexer that implements
+// an http.Handler and serves as the parent of
+// other multiplexers.
 type Mux struct {
-	path     string
-	regexp   string
-	header   http.Header
-	handlers []*Handler
-	children []*Mux
-	dynChild *Mux
-	parent   *Mux
+	path  string
+	trees map[string]*patricia.Tree
 }
 
-func New(path string) *Mux {
-	startIndex := strings.IndexByte(path, '/')
-	dynIndex := strings.IndexByte(path, ':')
-	endIndex := strings.IndexByte(path[startIndex+1:], '/')
-
-	if endIndex >= 0 {
-		endIndex = endIndex + 1
-
-	} else {
-		endIndex = len(path)
-	}
-
-	regexpIndex := strings.IndexByte(path[dynIndex+1:], ':')
-
-	if regexpIndex >= 0 {
-		regexpIndex = regexpIndex + 2
-
-		if regexpIndex > endIndex {
-			regexpIndex = regexpIndex - endIndex
-		}
-	} else {
-		regexpIndex = endIndex
-	}
-
-	m := &Mux{path: path[startIndex+1 : regexpIndex]}
-
-	if regexpIndex != endIndex {
-		m.regexp = path[regexpIndex+1 : endIndex]
-	}
-
-	if endIndex != len(path) {
-		child := New(path[endIndex:])
-
-		if strings.IndexByte(path[endIndex:], ':') >= 0 {
-			m.dynChild = child
-		} else {
-			m.children = []*Mux{child}
-		}
-
-		child.parent = m
-
-		return child
-	}
-
-	return m
+// New creates a new Mux. Its path is then
+// set in lowercase and, if needed, prepended a leading slash.
+func New(p string) *Mux {
+	return &Mux{path: resolvePath(p)}
 }
 
-func (m *Mux) Lookup(r *http.Request) (*Mux, error) {
-	var (
-		n      *Mux
-		header http.Header
-	)
-	startIndex := strings.IndexByte(r.URL.Path, '/')
-	endIndex := strings.IndexByte(r.URL.Path[startIndex+1:], '/')
-
-	if endIndex < 0 {
-		endIndex = len(r.URL.Path)
-	} else {
-		endIndex = endIndex + 1
+// Add adds a submultiplexer's handler to
+// the multiplexer's handlers tree.
+func (mux *Mux) Add(smux *Submux) {
+	for k, v := range smux.handlers {
+		mux.addValue(k, smux.Path(), v)
 	}
 
-	if len(m.header) > 0 {
-		header = n.header
+	for k, v := range smux.handlerFuncs {
+		mux.addValue(k, smux.Path(), v)
 	}
 
-	if m.path == r.URL.Path[startIndex+1:endIndex] {
-		n = m
-
-		goto walk
+	for _, c := range smux.submuxes {
+		mux.Add(c)
 	}
-
-	if i := strings.IndexByte(m.path, ':'); i >= 0 {
-		if m.regexp != "" {
-			match, err := regexp.MatchString(m.regexp, r.URL.Path)
-
-			if err != nil {
-				return nil, err
-			}
-
-			if !match {
-				return nil, nil
-			}
-		}
-
-		n = m
-		*r = *r.WithContext(n.ctx(r.Context(), r.URL.Path[startIndex+1:endIndex]))
-	}
-
-walk:
-	startIndex = strings.IndexByte(r.URL.Path[endIndex:], '/') + endIndex
-	endIndex = strings.IndexByte(r.URL.Path[startIndex+1:], '/')
-
-	if endIndex < 0 {
-		endIndex = len(r.URL.Path)
-	} else {
-		endIndex = endIndex + startIndex + 1
-	}
-
-	if n != nil && len(r.URL.Path[startIndex+1:endIndex]) > 0 {
-		for _, c := range n.children {
-			if c.path == r.URL.Path[startIndex+1:endIndex] {
-				n = c
-
-				if len(n.header) > 0 {
-					header = n.header
-				}
-
-				goto walk
-			}
-		}
-
-		if n.dynChild != nil {
-			if n.dynChild.regexp != "" {
-				match, err := regexp.MatchString(n.dynChild.regexp, r.URL.Path[startIndex+1:endIndex])
-
-				if err != nil {
-					return nil, err
-				}
-
-				if !match {
-					return nil, nil
-				}
-			}
-
-			n = n.dynChild
-
-			if len(n.header) > 0 {
-				header = n.header
-			}
-
-			*r = *r.WithContext(n.ctx(r.Context(), r.URL.Path[startIndex+1:endIndex]))
-
-			goto walk
-		}
-
-		return nil, nil
-	}
-
-	for k := range header {
-		if header.Get(k) != r.Header.Get(k) {
-			return nil, nil
-		}
-	}
-
-	return n, nil
 }
 
-func (m *Mux) Parent() *Mux {
-	return m.parent
-}
+// Debug prints the multiplexer's handlers tree in debug mode.
+func (mux *Mux) Debug() error {
+	for _, t := range mux.trees {
+		err := t.Debug()
 
-func (m *Mux) Root() *Mux {
-	for m.parent != nil {
-		return m.parent.Root()
+		if err != nil {
+			return err
+		}
 	}
 
-	return m
+	return nil
 }
 
-func (m *Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	n, err := m.Lookup(r)
+// Handle adds an http.Handler to the multiplexer's handlers tree.
+func (mux *Mux) Handle(m string, h http.Handler) {
+	mux.addValue(m, "", h)
+}
 
-	if err != nil {
-		PanicFunc(err)
+// HandleFunc adds an http.HandlerFunc to the multiplexer's handlers tree.
+func (mux *Mux) HandleFunc(m string, hfunc http.HandlerFunc) {
+	mux.addValue(m, "", hfunc)
+}
+
+// Print prints the multiplexer's handlers tree.
+func (mux *Mux) Print() error {
+	for _, t := range mux.trees {
+		err := t.Print()
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// ServeHTTP looks for a match inside the tree, according to the request method,
+// and if a node is found, the node's value is run if is either an http.Handler
+// an http.HandlerFunc.
+func (mux *Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if mux.trees == nil || mux.trees[r.Method] == nil {
+		http.NotFound(w, r)
 
 		return
 	}
 
-	if n != nil {
-		for _, hndr := range n.handlers {
-			if hndr.method == r.Method {
-				hndr.h.ServeHTTP(w, r)
+	n, p := mux.trees[r.Method].
+		GetByRune(r.URL.Path, ':', '/')
 
-				return
-			}
+	if n != nil && n.Value != nil {
+		if len(p) > 0 {
+			r = r.WithContext(context.WithValue(r.Context(), Params, p))
+		}
+
+		switch v := n.Value.(type) {
+		case http.Handler:
+			v.ServeHTTP(w, r)
+
+			return
+
+		case http.HandlerFunc:
+			v(w, r)
+
+			return
 		}
 	}
+
+	http.NotFound(w, r)
 }
 
-func (m *Mux) SetHandler(method string, h http.Handler) *Mux {
-	m.handlers = append(m.handlers, &Handler{h: h, method: method})
-
-	return m
-}
-
-func (m *Mux) SetHeader(k string, v string) *Mux {
-	if m.header == nil {
-		m.header = make(http.Header)
+// addValue resolves a path and merges it with the multiplexer's path
+// and then adds a value to the handlers tree.
+func (mux *Mux) addValue(m string, p string, v interface{}) *Mux {
+	if v == nil {
+		return mux
 	}
 
-	m.header.Set(k, v)
-
-	return m
-}
-
-func (m *Mux) SetSubmux(sm *Mux) *Mux {
-	if i := strings.IndexByte(sm.path, ':'); i >= 0 {
-		m.dynChild = sm
-
-		return m
+	if mux.trees == nil {
+		mux.trees = make(map[string]*patricia.Tree)
 	}
 
-	m.children = append(m.children, sm)
+	if mux.trees[m] == nil {
+		mux.trees[m] = patricia.New(m)
+	}
 
-	return sm
-}
+	mux.trees[m].Add(mux.path+p, v)
 
-func (m *Mux) ctx(ctx context.Context, val string) context.Context {
-	ctx = context.WithValue(
-		ctx,
-		m.path[1:],
-		val,
-	)
-
-	return ctx
+	return mux
 }
