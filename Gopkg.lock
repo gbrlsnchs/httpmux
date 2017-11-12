@@ -8,28 +8,28 @@
   version = "v1.1.0"
 
 [[projects]]
-  name = "github.com/gbrlsnchs/httphandler"
+  name = "github.com/fatih/color"
   packages = ["."]
-  revision = "22a6ce6abc9fe5e45598a2e0140bc6bdcb15176f"
-  version = "v0.1.0"
-
-[[projects]]
-  name = "github.com/gorilla/context"
-  packages = ["."]
-  revision = "1ea25387ff6f684839d82767c1733ff4d4d15d0a"
-  version = "v1.1"
-
-[[projects]]
-  name = "github.com/gorilla/mux"
-  packages = ["."]
-  revision = "24fca303ac6da784b9e8269f724ddeb0b2eea5e7"
+  revision = "570b54cabe6b8eb0bc2dfce68d964677d63b5260"
   version = "v1.5.0"
 
 [[projects]]
-  name = "github.com/julienschmidt/httprouter"
+  name = "github.com/gbrlsnchs/patricia"
   packages = ["."]
-  revision = "8c199fb6259ffc1af525cc3ad52ee60ba8359669"
-  version = "v1.1"
+  revision = "2a5b24676b1943213a565ba258e4f9eb14e01792"
+  version = "v0.2.0"
+
+[[projects]]
+  name = "github.com/mattn/go-colorable"
+  packages = ["."]
+  revision = "167de6bfdfba052fa6b2d3664c8f5272e23c9072"
+  version = "v0.0.9"
+
+[[projects]]
+  name = "github.com/mattn/go-isatty"
+  packages = ["."]
+  revision = "0360b2af4f38e8d38c7fce2a9f4e702702d73a39"
+  version = "v0.0.3"
 
 [[projects]]
   name = "github.com/pmezard/go-difflib"
@@ -43,9 +43,15 @@
   revision = "69483b4bd14f5845b5a1e55bca19e954e827f1d0"
   version = "v1.1.4"
 
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/sys"
+  packages = ["unix"]
+  revision = "1e2299c37cc91a509f1b12369872d27be0ce98a6"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b491e3d7d19b050892f0ee324d536fac542d3811c752bcccfe4bd6dc09b63ff5"
+  inputs-digest = "df6d1d2bbc4e4a710bb3cf805455c1777d6a8ed0dd9a0dfa38fcca4adb12ea43"
   solver-name = "gps-cdcl"
   solver-version = 1
