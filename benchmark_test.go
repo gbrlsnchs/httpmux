@@ -6,46 +6,80 @@ import (
 	"testing"
 
 	. "github.com/gbrlsnchs/httpmux"
-	"github.com/gorilla/mux"
-	"github.com/julienschmidt/httprouter"
 )
 
-const longPath = "/test/test/test/test/test/test"
+func BenchmarkSingleStatic(b *testing.B) {
+	b.ReportAllocs()
 
-var handlerFunc1 = func(w http.ResponseWriter, r *http.Request) {}
-var handlerFunc2 = func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {}
-
-func BenchmarkHTTPMux(b *testing.B) {
-	m := New(longPath+"/:test").SetHandler(http.MethodGet, &testHandler{handlerFunc1})
+	mux := New("/foo/bar/baz/qux")
 	w := httptest.NewRecorder()
-	r := httptest.NewRequest(http.MethodGet, longPath+"/123", nil)
+	r := httptest.NewRequest(http.MethodGet, "/foo/bar/baz/qux", nil)
+
+	mux.HandleFunc(http.MethodGet, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
 
 	for i := 0; i < b.N; i++ {
-		m.Root().ServeHTTP(w, r)
+		mux.ServeHTTP(w, r)
 	}
 }
 
-func BenchmarkHTTPRouter(b *testing.B) {
-	hr := httprouter.New()
-	hr.GET(longPath+"/:test", handlerFunc2)
+func BenchmarkSingleDynamic(b *testing.B) {
+	b.ReportAllocs()
 
+	mux := New("/foo/:bar/:baz/:qux")
 	w := httptest.NewRecorder()
-	r := httptest.NewRequest(http.MethodGet, longPath+"/123", nil)
+	r := httptest.NewRequest(http.MethodGet, "/foo/123/456/789", nil)
+
+	mux.HandleFunc(http.MethodGet, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
 
 	for i := 0; i < b.N; i++ {
-		hr.ServeHTTP(w, r)
+		mux.ServeHTTP(w, r)
 	}
 }
 
-func BenchmarkGorillaMux(b *testing.B) {
-	gm := mux.NewRouter()
+func BenchmarkMultipleStatic(b *testing.B) {
+	b.ReportAllocs()
 
-	gm.HandleFunc(longPath+"/{test}", handlerFunc1)
-
+	qux := NewSubmux("/qux")
+	baz := NewSubmux("/baz")
+	bar := NewSubmux("/bar")
+	mux := New("/foo")
 	w := httptest.NewRecorder()
-	r := httptest.NewRequest(http.MethodGet, longPath+"/123", nil)
+	r := httptest.NewRequest(http.MethodGet, "/foo/bar/baz/qux", nil)
+
+	qux.HandleFunc(http.MethodGet, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	baz.Add(qux)
+	bar.Add(baz)
+	mux.Add(bar)
 
 	for i := 0; i < b.N; i++ {
-		gm.ServeHTTP(w, r)
+		mux.ServeHTTP(w, r)
+	}
+}
+
+func BenchmarkMultipleDynamic(b *testing.B) {
+	b.ReportAllocs()
+
+	qux := NewSubmux("/:qux")
+	baz := NewSubmux("/:baz")
+	bar := NewSubmux("/:bar")
+	mux := New("/foo")
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/foo/123/456/789", nil)
+
+	qux.HandleFunc(http.MethodGet, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	baz.Add(qux)
+	bar.Add(baz)
+	mux.Add(bar)
+
+	for i := 0; i < b.N; i++ {
+		mux.ServeHTTP(w, r)
 	}
 }
