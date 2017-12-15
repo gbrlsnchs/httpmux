@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - `Router` and `Subrouter` structures.
 - Tests for the new structures.
 - Cancel method for making short-circuiting middlewares easier.
+- Documentation for the new structs, methods and functions.
 
 ### Changed
 - Travis CI script.
