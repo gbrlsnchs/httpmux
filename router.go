@@ -116,7 +116,11 @@ func (rt *Router) WithPrefix(p string) *Router {
 
 // add adds middlewares to the radix tree.
 func (rt *Router) add(m, p string, mids []interface{}) {
-	if len(mids) == 0 || p == "" {
+	if p == "" {
+		p = "/"
+	}
+
+	if len(mids) == 0 {
 		return
 	}
 
