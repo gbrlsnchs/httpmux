@@ -8,78 +8,72 @@ import (
 	. "github.com/gbrlsnchs/httpmux"
 )
 
-func BenchmarkSingleStatic(b *testing.B) {
+func BenchmarkStatic(b *testing.B) {
 	b.ReportAllocs()
 
-	mux := New("/foo/bar/baz/qux")
+	rt := NewRouter().WithPrefix("/foo/bar/baz/qux")
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/foo/bar/baz/qux", nil)
 
-	mux.HandleFunc(http.MethodGet, func(w http.ResponseWriter, r *http.Request) {
+	rt.HandleFunc(http.MethodGet, "/", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 
 	for i := 0; i < b.N; i++ {
-		mux.ServeHTTP(w, r)
+		rt.ServeHTTP(w, r)
 	}
 }
 
-func BenchmarkSingleDynamic(b *testing.B) {
+func BenchmarkDynamic(b *testing.B) {
 	b.ReportAllocs()
 
-	mux := New("/foo/:bar/:baz/:qux")
+	rt := NewRouter().WithPrefix("/foo/:bar/:baz/:qux")
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/foo/123/456/789", nil)
 
-	mux.HandleFunc(http.MethodGet, func(w http.ResponseWriter, r *http.Request) {
+	rt.HandleFunc(http.MethodGet, "/", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 
 	for i := 0; i < b.N; i++ {
-		mux.ServeHTTP(w, r)
+		rt.ServeHTTP(w, r)
 	}
 }
 
-func BenchmarkMultipleStatic(b *testing.B) {
+func BenchmarkStaticWithCancel(b *testing.B) {
 	b.ReportAllocs()
 
-	qux := NewSubmux("/qux")
-	baz := NewSubmux("/baz")
-	bar := NewSubmux("/bar")
-	mux := New("/foo")
+	rt := NewRouter().WithPrefix("/foo/bar/baz/qux")
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/foo/bar/baz/qux", nil)
 
-	qux.HandleFunc(http.MethodGet, func(w http.ResponseWriter, r *http.Request) {
+	rt.HandleMiddlewares(http.MethodGet, "/", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+		Cancel(r)
+	}, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-	baz.Add(qux)
-	bar.Add(baz)
-	mux.Add(bar)
 
 	for i := 0; i < b.N; i++ {
-		mux.ServeHTTP(w, r)
+		rt.ServeHTTP(w, r)
 	}
 }
 
-func BenchmarkMultipleDynamic(b *testing.B) {
+func BenchmarkDynamicWithCancel(b *testing.B) {
 	b.ReportAllocs()
 
-	qux := NewSubmux("/:qux")
-	baz := NewSubmux("/:baz")
-	bar := NewSubmux("/:bar")
-	mux := New("/foo")
+	rt := NewRouter().WithPrefix("/foo/:bar/:baz/:qux")
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/foo/123/456/789", nil)
 
-	qux.HandleFunc(http.MethodGet, func(w http.ResponseWriter, r *http.Request) {
+	rt.HandleMiddlewares(http.MethodGet, "/", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+		Cancel(r)
+	}, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-	baz.Add(qux)
-	bar.Add(baz)
-	mux.Add(bar)
 
 	for i := 0; i < b.N; i++ {
-		mux.ServeHTTP(w, r)
+		rt.ServeHTTP(w, r)
 	}
 }

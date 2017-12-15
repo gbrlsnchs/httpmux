@@ -7,12 +7,21 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## Unreleased
 ### Added
 - Makefile support.
+- `Router` and `Subrouter` structures.
+- Tests for the new structures.
+- Cancel method for making short-circuiting middlewares easier.
+- Documentation for the new structs, methods and functions.
 
 ### Changed
 - Travis CI script.
+- The PATRICIA tree that holds handlers is now a radix tree.
+- `doc.go` now says about middlewares.
+- Example now shows middlewares usage.
+- README file.
 
 ### Removed
 - Travis CI `goimports` script.
+- `mux.go`, `mux_test.go`, `submux.go` and `path.go` files.
 
 ## [0.3.0] - 2017-11-11
 ### Added

@@ -14,10 +14,10 @@
   version = "v1.5.0"
 
 [[projects]]
-  name = "github.com/gbrlsnchs/patricia"
+  name = "github.com/gbrlsnchs/radix"
   packages = ["."]
-  revision = "2a5b24676b1943213a565ba258e4f9eb14e01792"
-  version = "v0.2.0"
+  revision = "7e89912698dc3ace6b39a0c793bd54d75989ffaa"
+  version = "v0.4.0"
 
 [[projects]]
   name = "github.com/mattn/go-colorable"
@@ -47,11 +47,11 @@
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "1e2299c37cc91a509f1b12369872d27be0ce98a6"
+  revision = "1d2aa6dbdea45adaaebb9905d0666e4537563829"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "df6d1d2bbc4e4a710bb3cf805455c1777d6a8ed0dd9a0dfa38fcca4adb12ea43"
+  inputs-digest = "bdf46b1a9d70719e5d0a67b76be8e2bff8845fe890412a41a7958a1137f9d279"
   solver-name = "gps-cdcl"
   solver-version = 1
