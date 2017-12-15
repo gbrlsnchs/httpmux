@@ -1,38 +1,32 @@
 package httpmux_test
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gbrlsnchs/httpmux"
 )
 
 func Example() {
-	example := func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}
+	rt := httpmux.NewRouter()
 
-	// "/api/auth"
-	authMux := httpmux.NewSubmux("/auth")
+	rt.HandleMiddlewares(http.MethodGet, "/example",
+		// Logger.
+		func(w http.ResponseWriter, r *http.Request) {
+			log.Printf("r.URL.Path = %s\n", r.URL.Path)
+		},
+		// Guard.
+		func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/forbidden" {
+				w.WriteHeader(http.StatusForbidden)
+				httpmux.Cancel(r)
+			}
+		},
+		// Handler.
+		func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		},
+	)
 
-	authMux.HandleFunc(http.MethodPost, example)
-
-	// "/api/user/:id"
-	userIDMux := httpmux.NewSubmux("/:id")
-
-	userIDMux.HandleFunc(http.MethodGet, example)
-	userIDMux.HandleFunc(http.MethodPost, example)
-
-	// "/api/user"
-	userMux := httpmux.NewSubmux("/user")
-
-	userMux.HandleFunc(http.MethodPost, example)
-	userMux.Add(userIDMux)
-
-	// "/api"
-	parentMux := httpmux.New("/api")
-
-	parentMux.Add(authMux)
-	parentMux.Add(userMux)
-
-	http.ListenAndServe("/", parentMux)
+	http.ListenAndServe("/", rt)
 }
