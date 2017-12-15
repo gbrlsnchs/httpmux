@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 - Travis CI script.
+- The PATRICIA tree that holds handlers is now a radix tree.
 
 ### Removed
 - Travis CI `goimports` script.
