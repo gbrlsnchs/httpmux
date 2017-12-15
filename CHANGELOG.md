@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - The PATRICIA tree that holds handlers is now a radix tree.
 - `doc.go` now says about middlewares.
 - Example now shows middlewares usage.
+- README file.
 
 ### Removed
 - Travis CI `goimports` script.
