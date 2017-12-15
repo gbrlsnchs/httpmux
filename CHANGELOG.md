@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Removed
 - Travis CI `goimports` script.
+- `mux.go`, `mux_test.go`, `submux.go` and `path.go` files.
 
 ## [0.3.0] - 2017-11-11
 ### Added
