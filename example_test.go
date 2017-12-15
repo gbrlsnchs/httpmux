@@ -10,14 +10,16 @@ import (
 func Example() {
 	rt := httpmux.NewRouter()
 
-	rt.HandleMiddlewares(http.MethodGet, "/example",
+	rt.HandleMiddlewares(http.MethodGet, "/:path",
 		// Logger.
 		func(w http.ResponseWriter, r *http.Request) {
 			log.Printf("r.URL.Path = %s\n", r.URL.Path)
 		},
 		// Guard.
 		func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path == "/forbidden" {
+			params := r.Context().Value(httpmux.Params).(map[string]string)
+
+			if params["path"] == "forbidden" {
 				w.WriteHeader(http.StatusForbidden)
 				httpmux.Cancel(r)
 			}
