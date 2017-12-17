@@ -20,7 +20,7 @@ func TestRouter(t *testing.T) {
 		mids           []interface{}
 		expected       int
 		expectedParams map[string]string
-		sub            *Subrouter
+		subChain       []*Subrouter
 	}{
 		// #0
 		{
@@ -62,7 +62,7 @@ func TestRouter(t *testing.T) {
 			method:         http.MethodGet,
 			expected:       http.StatusOK,
 			expectedParams: map[string]string{"bar": "123", "baz": "456"},
-			sub:            NewSubrouter().WithPrefix("/:baz"),
+			subChain:       []*Subrouter{NewSubrouter().WithPrefix("/:baz")},
 		},
 		// #5
 		{
@@ -71,7 +71,7 @@ func TestRouter(t *testing.T) {
 			method:         http.MethodGet,
 			expected:       http.StatusOK,
 			expectedParams: map[string]string{"bar": "123", "baz": "456"},
-			sub:            NewSubrouter().WithPrefix("/:bar/:baz"),
+			subChain:       []*Subrouter{NewSubrouter().WithPrefix("/:bar/:baz")},
 		},
 		// #6
 		{
@@ -107,6 +107,15 @@ func TestRouter(t *testing.T) {
 				},
 			},
 		},
+		// #9
+		{
+			path:           "/foo/123/456",
+			rt:             NewRouter().WithPrefix("/foo"),
+			method:         http.MethodGet,
+			expected:       http.StatusOK,
+			expectedParams: map[string]string{"bar": "123", "baz": "456"},
+			subChain:       []*Subrouter{NewSubrouter().WithPrefix("/:bar"), NewSubrouter().WithPrefix("/:baz")},
+		},
 	}
 
 	for i, test := range tests {
@@ -133,13 +142,23 @@ func TestRouter(t *testing.T) {
 			w.WriteHeader(http.StatusOK)
 		})
 
-		if test.sub != nil {
-			test.sub.HandleMiddlewares(test.method, test.endp, midsToAdd...)
-			test.rt.Use(test.sub)
+		if len(test.subChain) > 0 {
+			for i := len(test.subChain) - 1; i >= 0; i-- {
+				if i == len(test.subChain)-1 {
+					test.subChain[i].HandleMiddlewares(test.method, "/", midsToAdd...)
+				} else {
+					test.subChain[i].Use(test.subChain[i+1])
+				}
+			}
+
+			test.rt.Use(test.subChain[0])
 		} else {
 			test.rt.HandleMiddlewares(test.method, test.endp, midsToAdd...)
 		}
 
+		err := test.rt.Debug()
+
+		a.Nil(err, index)
 		test.rt.ServeHTTP(w, r)
 		a.Exactly(test.expected, w.Code, index)
 	}
