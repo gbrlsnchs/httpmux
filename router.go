@@ -18,6 +18,18 @@ func NewRouter() *Router {
 	return &Router{methods: make(map[string]*radix.Tree)}
 }
 
+// Debug prints the router's radix tree structure
+// for each HTTP method registered.
+func (rt *Router) Debug() error {
+	for _, m := range rt.methods {
+		if err := m.Debug(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // Handle registers an http.Handler for a given method and path.
 func (rt *Router) Handle(m, p string, h http.Handler) {
 	rt.add(m, rt.prefix+resolvedPath(p), []interface{}{h})
