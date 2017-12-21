@@ -86,6 +86,11 @@ func (rt *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 			case http.HandlerFunc:
 				v(w, r)
+
+			default:
+				http.NotFound(w, r)
+
+				return
 			}
 
 			select {
