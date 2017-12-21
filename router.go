@@ -73,11 +73,10 @@ func (rt *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	n, p := rt.methods[r.Method].GetByRune(r.URL.Path, ':', '/')
 
 	if n != nil {
-		ctx := r.Context()
 		mids := n.Value.([]interface{})
 
 		if len(p) > 0 {
-			r = r.WithContext(context.WithValue(ctx, Params, p))
+			r = r.WithContext(context.WithValue(r.Context(), Params, p))
 		}
 
 		for _, m := range mids {
@@ -90,7 +89,7 @@ func (rt *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 
 			select {
-			case <-ctx.Done():
+			case <-r.Context().Done():
 				return
 
 			default:
