@@ -8,7 +8,8 @@ import (
 // Cancel sinalizes to not run the next
 // handler in a middleware stack.
 func Cancel(r *http.Request) {
-	_, cancel := context.WithCancel(r.Context())
+	ctx, cancel := context.WithCancel(r.Context())
+	*r = *r.WithContext(ctx)
 
 	cancel()
 }
