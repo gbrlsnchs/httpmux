@@ -58,7 +58,7 @@ func (s *Subrouter) Use(sub *Subrouter) {
 		s.initEndp(k)
 
 		for m, v := range mids {
-			s.endps[k][m] = append(s.endps[k][m], v)
+			s.endps[k][m] = append(s.endps[k][m], v...)
 		}
 	}
 }
