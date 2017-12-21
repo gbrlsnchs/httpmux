@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - New test cases.
 
 ### Fixed
-- `Subrouter.Use` now correctly spread handlers to the parent subrouter's handlers slice.
+- `Subrouter.Use` now correctly spreads handlers to the parent subrouter's handlers slice.
 
 ## [0.4.0] - 2017-12-17
 ### Added
