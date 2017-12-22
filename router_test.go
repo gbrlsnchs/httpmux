@@ -10,6 +10,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func routerHelper(subrs ...*Subrouter) *Router {
+	r := NewRouter()
+
+	for _, subr := range subrs {
+		r.Use(subr)
+	}
+
+	return r
+}
+
 func TestRouter(t *testing.T) {
 	a := assert.New(t)
 	tests := []*struct {
