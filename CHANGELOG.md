@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Mock-up test file.
 - Helpers test file.
 
+### Changed
+- Router tests.
+
 ## [0.5.1] - 2017-12-21
 ### Fixed
 - `Cancel` not canceling middleware stacks.

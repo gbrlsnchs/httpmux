@@ -2,7 +2,6 @@ package httpmux_test
 
 import (
 	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	. "github.com/gbrlsnchs/httpmux"
@@ -10,17 +9,23 @@ import (
 
 var responseNotFound = []byte("404 page not found\n")
 
-func subrouterHelperWithHandler(status int, response string) *Subrouter {
+func subrouterHelperWithHandler(status int, response string, hasHandler bool) *Subrouter {
 	subr := NewSubrouter()
+	h := &handlerMockup{status: status, response: response}
 
-	subr.Handle(http.MethodGet, "/", &handlerMockup{status: status, response: response})
+	if hasHandler {
+		subr.Handle(http.MethodGet, "/", h)
+
+		return subr
+	}
+
+	subr.HandleFunc(http.MethodGet, "/", h.ServeHTTP)
 
 	return subr
 }
 
 func TestEmptySubrouter(t *testing.T) {
-	w := httptest.NewRecorder()
-	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	w, r := responseRequest()
 
 	routerHelper(NewSubrouter()).ServeHTTP(w, r)
 
@@ -30,22 +35,9 @@ func TestEmptySubrouter(t *testing.T) {
 }
 
 func TestSubrouterHandle(t *testing.T) {
-	testTable := []struct {
-		obj              *Subrouter
-		expectedStatus   int
-		expectedResponse []byte
-	}{
-		{subrouterHelperWithHandler(http.StatusOK, "foobar"), http.StatusOK, []byte("foobar")},
-	}
+	testSubrouter(t, true)
+}
 
-	for _, tt := range testTable {
-		w := httptest.NewRecorder()
-		r := httptest.NewRequest(http.MethodGet, "/", nil)
-
-		routerHelper(tt.obj).ServeHTTP(w, r)
-
-		body := w.Body.Bytes()
-
-		testHTTPResponse(t, tt.expectedStatus, w.Code, tt.expectedResponse, body)
-	}
+func TestSubrouterHandleFunc(t *testing.T) {
+	testSubrouter(t, false)
 }
