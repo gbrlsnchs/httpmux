@@ -73,26 +73,30 @@ func (rt *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	n, p := rt.methods[r.Method].GetByRune(r.URL.Path, ':', '/')
 
 	if n != nil {
-		mids := n.Value.([]interface{})
+		tnode := n.Value.(*node)
 
 		if len(p) > 0 {
 			r = r.WithContext(context.WithValue(r.Context(), Params, p))
 		}
 
-		for _, m := range mids {
-			switch v := m.(type) {
-			case http.Handler:
-				v.ServeHTTP(w, r)
+		for i := 0; i < tnode.len; i++ {
+			if tnode.handlers[i] != nil {
+				tnode.handlers[i].ServeHTTP(w, r)
 
-			case http.HandlerFunc:
-				v(w, r)
-
-			default:
-				http.NotFound(w, r)
-
-				return
+				goto healthCheck
 			}
 
+			if tnode.handlerFuncs[i] != nil {
+				tnode.handlerFuncs[i](w, r)
+
+				goto healthCheck
+			}
+
+			http.NotFound(w, r)
+
+			return
+
+		healthCheck:
 			select {
 			case <-r.Context().Done():
 				return
@@ -144,5 +148,11 @@ func (rt *Router) add(m, p string, mids []interface{}) {
 		rt.methods[m] = radix.New(m)
 	}
 
-	rt.methods[m].Add(p, mids)
+	n := newNode(len(mids))
+
+	for i, m := range mids {
+		n.add(i, m)
+	}
+
+	rt.methods[m].Add(p, n)
 }
