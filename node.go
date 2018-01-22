@@ -3,7 +3,25 @@ package httpmux
 import "net/http"
 
 type node struct {
-	count      uint
-	handler    []http.Handler
-	handleFunc []http.HandlerFunc
+	len          int
+	handlerFuncs []http.HandlerFunc
+	handlers     []http.Handler
+}
+
+func newNode(len int) *node {
+	return &node{
+		len:          len,
+		handlerFuncs: make([]http.HandlerFunc, len),
+		handlers:     make([]http.Handler, len),
+	}
+}
+
+func (n *node) add(pos int, h interface{}) {
+	if h, ok := h.(http.HandlerFunc); ok {
+		n.handlerFuncs[pos] = h
+	}
+
+	if h, ok := h.(http.Handler); ok {
+		n.handlers[pos] = h
+	}
 }
