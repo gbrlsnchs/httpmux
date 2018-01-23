@@ -117,3 +117,31 @@ func TestSubrouterWithCancel(t *testing.T) {
 		t.Error("http.HandlerFunc has run")
 	}
 }
+
+func TestSubrouterHandleWithParams(t *testing.T) {
+	expectedStatus := http.StatusOK
+	expectedResponse := []byte("foo=123/bar=456")
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/123/456", nil)
+	subr := NewSubrouter()
+	rt := NewRouter()
+	h := &handlerMockup{status: expectedStatus, returnParams: true}
+
+	subr.Handle(http.MethodGet, "/:foo/:bar", h)
+	rt.Use(subr)
+	rt.ServeHTTP(w, r)
+
+	body := w.Body.Bytes()
+
+	if expectedStatus != w.Code {
+		t.Errorf("%d is not expected status (%d)\n", w.Code, expectedStatus)
+	}
+
+	if !bytes.Equal(expectedResponse, body) {
+		t.Errorf("%x is not expected response (%x)\n", body, expectedResponse)
+	}
+
+	if !h.finished {
+		t.Error("http.Handler has not run")
+	}
+}
