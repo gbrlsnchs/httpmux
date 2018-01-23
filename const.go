@@ -5,7 +5,7 @@ package httpmux
 type CtxKey uint
 
 const (
-	// Params is the value a request's context
+	// ParamsKey is the value a request's context
 	// holds if a route with named parameters is match.
-	Params CtxKey = iota
+	ParamsKey CtxKey = iota
 )

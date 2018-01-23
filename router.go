@@ -76,7 +76,7 @@ func (rt *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		mids := n.Value.([]interface{})
 
 		if len(p) > 0 {
-			r = r.WithContext(context.WithValue(r.Context(), Params, p))
+			r = r.WithContext(context.WithValue(r.Context(), ParamsKey, p))
 		}
 
 		for _, m := range mids {
