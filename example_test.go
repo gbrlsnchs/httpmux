@@ -17,7 +17,7 @@ func Example() {
 		},
 		// Guard.
 		func(w http.ResponseWriter, r *http.Request) {
-			params := r.Context().Value(httpmux.Params).(map[string]string)
+			params := httpmux.Params(r)
 
 			if params["path"] == "forbidden" {
 				w.WriteHeader(http.StatusForbidden)

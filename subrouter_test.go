@@ -9,13 +9,14 @@ import (
 	. "github.com/gbrlsnchs/httpmux"
 )
 
-func TestEmptyRouter(t *testing.T) {
+func TestEmptySubrouter(t *testing.T) {
 	expectedStatus := http.StatusNotFound
 	expectedResponse := []byte("404 page not found\n")
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	rt := NewRouter()
 
+	rt.Use(NewSubrouter())
 	rt.ServeHTTP(w, r)
 
 	body := w.Body.Bytes()
@@ -29,15 +30,17 @@ func TestEmptyRouter(t *testing.T) {
 	}
 }
 
-func TestRouterHandle(t *testing.T) {
+func TestSubrouterHandle(t *testing.T) {
 	expectedStatus := http.StatusOK
 	expectedResponse := []byte("foobar")
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	subr := NewSubrouter()
 	rt := NewRouter()
 	h := &handlerMockup{status: expectedStatus, response: expectedResponse}
 
-	rt.Handle(http.MethodGet, "/", h)
+	subr.Handle(http.MethodGet, "/", h)
+	rt.Use(subr)
 	rt.ServeHTTP(w, r)
 
 	body := w.Body.Bytes()
@@ -55,15 +58,17 @@ func TestRouterHandle(t *testing.T) {
 	}
 }
 
-func TestRouterHandleFunc(t *testing.T) {
+func TestSubrouterHandleFunc(t *testing.T) {
 	expectedStatus := http.StatusOK
 	expectedResponse := []byte("foobar")
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	subr := NewSubrouter()
 	rt := NewRouter()
 	h := &handlerMockup{status: expectedStatus, response: expectedResponse}
 
-	rt.HandleFunc(http.MethodGet, "/", h.ServeHTTP)
+	subr.HandleFunc(http.MethodGet, "/", h.ServeHTTP)
+	rt.Use(subr)
 	rt.ServeHTTP(w, r)
 
 	body := w.Body.Bytes()
@@ -81,15 +86,17 @@ func TestRouterHandleFunc(t *testing.T) {
 	}
 }
 
-func TestRouterWithCancel(t *testing.T) {
+func TestSubrouterWithCancel(t *testing.T) {
 	expectedStatus := http.StatusBadRequest
 	expectedResponse := []byte{}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	subr := NewSubrouter()
 	rt := NewRouter()
 	h := &handlerMockup{status: expectedStatus, response: expectedResponse}
 
-	rt.HandleMiddlewares(http.MethodGet, "/", h.Cancel, h.ServeHTTP)
+	subr.HandleMiddlewares(http.MethodGet, "/", h.Cancel, h.ServeHTTP)
+	rt.Use(subr)
 	rt.ServeHTTP(w, r)
 
 	body := w.Body.Bytes()
@@ -111,15 +118,17 @@ func TestRouterWithCancel(t *testing.T) {
 	}
 }
 
-func TestRouterHandleWithParams(t *testing.T) {
+func TestSubrouterHandleWithParams(t *testing.T) {
 	expectedStatus := http.StatusOK
 	expectedResponse := []byte("foo=123/bar=456")
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/123/456", nil)
+	subr := NewSubrouter()
 	rt := NewRouter()
 	h := &handlerMockup{status: expectedStatus, returnParams: true}
 
-	rt.Handle(http.MethodGet, "/:foo/:bar", h)
+	subr.Handle(http.MethodGet, "/:foo/:bar", h)
+	rt.Use(subr)
 	rt.ServeHTTP(w, r)
 
 	body := w.Body.Bytes()
