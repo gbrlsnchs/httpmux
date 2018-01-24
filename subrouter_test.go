@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
+	"strings"
 	"testing"
 
 	. "github.com/gbrlsnchs/httpmux"
@@ -120,7 +122,7 @@ func TestSubrouterWithCancel(t *testing.T) {
 
 func TestSubrouterHandleWithParams(t *testing.T) {
 	expectedStatus := http.StatusOK
-	expectedResponse := []byte("foo=123/bar=456")
+	expectedResponse := map[string]string{"foo": "123", "bar": "456"}
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/123/456", nil)
 	subr := NewSubrouter()
@@ -131,14 +133,19 @@ func TestSubrouterHandleWithParams(t *testing.T) {
 	rt.Use(subr)
 	rt.ServeHTTP(w, r)
 
-	body := w.Body.Bytes()
+	body := strings.Split(w.Body.String(), "/")
+	actualResponse := map[string]string{}
+
+	for i := 0; i < len(body); i += 2 {
+		actualResponse[body[i]] = body[i+1]
+	}
 
 	if expectedStatus != w.Code {
 		t.Errorf("%d is not expected status (%d)\n", w.Code, expectedStatus)
 	}
 
-	if !bytes.Equal(expectedResponse, body) {
-		t.Errorf("%x is not expected response (%x)\n", body, expectedResponse)
+	if !reflect.DeepEqual(expectedResponse, actualResponse) {
+		t.Errorf("%v is not expected response (%v)\n", actualResponse, expectedResponse)
 	}
 
 	if !h.finished {

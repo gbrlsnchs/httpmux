@@ -33,7 +33,7 @@ func (hm *handlerMockup) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		keys := []string{}
 
 		for k, v := range p {
-			keys = append(keys, strings.Join([]string{k, v}, "="))
+			keys = append(keys, k, v)
 		}
 
 		content = []byte(strings.Join(keys, "/"))
