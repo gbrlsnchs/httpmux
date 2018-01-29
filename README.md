@@ -13,6 +13,44 @@ on both new and old projects, since it doesn't present any new pattern.
 ## Usage
 Full documentation [here].
 
+## Example (from example_test.go)
+```go
+package httpmux_test
+
+import (
+	"log"
+	"net/http"
+
+	"github.com/gbrlsnchs/httpmux"
+)
+
+func Example() {
+	rt := httpmux.NewRouter()
+
+	rt.HandleMiddlewares(http.MethodGet, "/:path",
+		// Logger.
+		func(w http.ResponseWriter, r *http.Request) {
+			log.Printf("r.URL.Path = %s\n", r.URL.Path)
+		},
+		// Guard.
+		func(w http.ResponseWriter, r *http.Request) {
+			params := httpmux.Params(r)
+
+			if params["path"] == "forbidden" {
+				w.WriteHeader(http.StatusForbidden)
+				httpmux.Cancel(r)
+			}
+		},
+		// Handler.
+		func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		},
+	)
+
+	http.ListenAndServe("/", rt)
+}
+```
+
 ## Contribution
 ### How to help:
 - Pull Requests
