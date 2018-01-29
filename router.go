@@ -7,14 +7,11 @@ import (
 	"github.com/gbrlsnchs/radix"
 )
 
-// CommonMiddlewareStack is a set of middlewares,
-// ordered as in a stack, for common usage between a Router's endpoints.
-var CommonMiddlewareStack []interface{}
-
 // Router is a router that implements a http.Handler.
 type Router struct {
 	prefix  string
 	methods map[string]*radix.Tree
+	common  []interface{}
 }
 
 // NewRouter creates and initializes a new Router.
@@ -115,6 +112,11 @@ func (rt *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	http.NotFound(w, r)
 }
 
+// SetCommon sets middlewares that run for all endpoints.
+func (rt *Router) SetCommon(mids ...interface{}) {
+	rt.common = mids
+}
+
 // Use registers a Subrouter to be used by the Router.
 func (rt *Router) Use(sub *Subrouter) {
 	for endp, mids := range sub.endps {
@@ -148,10 +150,24 @@ func (rt *Router) add(m, p string, mids []interface{}) {
 		return
 	}
 
-	mids = append(CommonMiddlewareStack, mids...)
+	mids = append(rt.common, mids...)
 
 	if rt.methods[m] == nil {
 		rt.methods[m] = radix.New(m)
+	}
+
+	// Filter middlewares before creating a node.
+	for i := 0; i < len(mids); i++ {
+		if _, ok := mids[i].(http.HandlerFunc); ok {
+			continue
+		}
+
+		if _, ok := mids[i].(http.Handler); ok {
+			continue
+		}
+
+		mids = append(mids[:i], mids[i+1:]...)
+		i--
 	}
 
 	n := newNode(len(mids))

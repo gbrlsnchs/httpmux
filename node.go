@@ -19,6 +19,8 @@ func newNode(len int) *node {
 func (n *node) add(pos int, h interface{}) {
 	if h, ok := h.(http.HandlerFunc); ok {
 		n.handlerFuncs[pos] = h
+
+		return
 	}
 
 	if h, ok := h.(http.Handler); ok {

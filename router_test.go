@@ -143,3 +143,63 @@ func TestRouterHandleWithParams(t *testing.T) {
 		t.Error("http.Handler has not run")
 	}
 }
+
+func TestRouterHandleWithCommon(t *testing.T) {
+	expectedStatus := http.StatusOK
+	expectedResponse := []byte("foobar")
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	rt := NewRouter()
+	h := &handlerMockup{status: expectedStatus, response: expectedResponse}
+
+	rt.SetCommon(
+		func(_ http.ResponseWriter, _ *http.Request) {},
+		http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}),
+	)
+	rt.Handle(http.MethodGet, "/", h)
+	rt.ServeHTTP(w, r)
+
+	body := w.Body.Bytes()
+
+	if expectedStatus != w.Code {
+		t.Errorf("%d is not expected status (%d)\n", w.Code, expectedStatus)
+	}
+
+	if !bytes.Equal(expectedResponse, body) {
+		t.Errorf("%x is not expected response (%x)\n", body, expectedResponse)
+	}
+
+	if !h.finished {
+		t.Error("http.Handler has not run")
+	}
+}
+
+func TestRouterHandleFuncWithCommon(t *testing.T) {
+	expectedStatus := http.StatusOK
+	expectedResponse := []byte("foobar")
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	rt := NewRouter()
+	h := &handlerMockup{status: expectedStatus, response: expectedResponse}
+
+	rt.SetCommon(
+		func(_ http.ResponseWriter, _ *http.Request) {},
+		http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}),
+	)
+	rt.HandleFunc(http.MethodGet, "/", h.ServeHTTP)
+	rt.ServeHTTP(w, r)
+
+	body := w.Body.Bytes()
+
+	if expectedStatus != w.Code {
+		t.Errorf("%d is not expected status (%d)\n", w.Code, expectedStatus)
+	}
+
+	if !bytes.Equal(expectedResponse, body) {
+		t.Errorf("%x is not expected response (%x)\n", body, expectedResponse)
+	}
+
+	if !h.finished {
+		t.Error("http.HandlerFunc has not run")
+	}
+}
