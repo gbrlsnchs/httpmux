@@ -2,12 +2,6 @@
 
 
 [[projects]]
-  name = "github.com/davecgh/go-spew"
-  packages = ["spew"]
-  revision = "346938d642f2ec3594ed81d874461961cd0faa76"
-  version = "v1.1.0"
-
-[[projects]]
   name = "github.com/fatih/color"
   packages = ["."]
   revision = "570b54cabe6b8eb0bc2dfce68d964677d63b5260"
@@ -16,8 +10,8 @@
 [[projects]]
   name = "github.com/gbrlsnchs/radix"
   packages = ["."]
-  revision = "269a86873cc6a9676c340542d40defb06262eb1d"
-  version = "v0.4.1"
+  revision = "00434e33a4787bc8dbbed39d6fb5010d0fd1cd4d"
+  version = "v0.4.2"
 
 [[projects]]
   name = "github.com/mattn/go-colorable"
@@ -32,26 +26,14 @@
   version = "v0.0.3"
 
 [[projects]]
-  name = "github.com/pmezard/go-difflib"
-  packages = ["difflib"]
-  revision = "792786c7400a136282c1664665ae0a8db921c6c2"
-  version = "v1.0.0"
-
-[[projects]]
-  name = "github.com/stretchr/testify"
-  packages = ["assert"]
-  revision = "69483b4bd14f5845b5a1e55bca19e954e827f1d0"
-  version = "v1.1.4"
-
-[[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "571f7bbbe08da2a8955aed9d4db316e78630e9a3"
+  revision = "ff2a66f350cefa5c93a634eadb5d25bb60c85a9c"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "bdf46b1a9d70719e5d0a67b76be8e2bff8845fe890412a41a7958a1137f9d279"
+  inputs-digest = "387fea9203f4fed1da5fe680eec72e7d5a2f09307f6c39f3a4db27bd274ead68"
   solver-name = "gps-cdcl"
   solver-version = 1
