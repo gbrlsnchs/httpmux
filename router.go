@@ -7,6 +7,10 @@ import (
 	"github.com/gbrlsnchs/radix"
 )
 
+// CommonMiddlewareStack is a set of middlewares,
+// ordered as in a stack, for common usage between a Router's endpoints.
+var CommonMiddlewareStack []interface{}
+
 // Router is a router that implements a http.Handler.
 type Router struct {
 	prefix  string
@@ -143,6 +147,8 @@ func (rt *Router) add(m, p string, mids []interface{}) {
 	if len(mids) == 0 {
 		return
 	}
+
+	mids = append(CommonMiddlewareStack, mids...)
 
 	if rt.methods[m] == nil {
 		rt.methods[m] = radix.New(m)
