@@ -19,6 +19,8 @@ func BenchmarkStatic(b *testing.B) {
 		w.WriteHeader(http.StatusOK)
 	})
 
+	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
 		rt.ServeHTTP(w, r)
 	}
@@ -34,6 +36,8 @@ func BenchmarkDynamic(b *testing.B) {
 	rt.HandleFunc(http.MethodGet, "/", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
+
+	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
 		rt.ServeHTTP(w, r)
@@ -54,6 +58,8 @@ func BenchmarkStaticWithCancel(b *testing.B) {
 		w.WriteHeader(http.StatusOK)
 	})
 
+	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
 		rt.ServeHTTP(w, r)
 	}
@@ -72,6 +78,8 @@ func BenchmarkDynamicWithCancel(b *testing.B) {
 	}, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
+
+	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
 		rt.ServeHTTP(w, r)
