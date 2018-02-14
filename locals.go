@@ -7,6 +7,7 @@ import (
 
 // SetLocal sets a variable in a request's context
 // for retrieving it in another middleware.
-func SetLocal(r *http.Request, v, k interface{}) {
-	*r = *r.WithContext(context.WithValue(r.Context(), k, v))
+func SetLocal(r *http.Request, key, val interface{}) {
+	ctx := context.WithValue(r.Context(), key, val)
+	*r = *r.WithContext(ctx)
 }
