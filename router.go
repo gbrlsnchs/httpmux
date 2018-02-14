@@ -7,10 +7,6 @@ import (
 	"github.com/gbrlsnchs/radix"
 )
 
-// ParamsKey is the value for used for
-// retrieving the parameters map in a Context.
-var ParamsKey interface{}
-
 // Router is a router that implements a http.Handler.
 type Router struct {
 	prefix  string
@@ -80,8 +76,8 @@ func (rt *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if n != nil {
 		tnode := n.Value.(*node)
 
-		if len(p) > 0 {
-			r = r.WithContext(context.WithValue(r.Context(), ParamsKey, p))
+		if len(p) > 0 && paramsKey != nil {
+			r = r.WithContext(context.WithValue(r.Context(), paramsKey, p))
 		}
 
 		for i := 0; i < tnode.len; i++ {

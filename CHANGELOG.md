@@ -7,9 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Added
 - `SetLocal` function for adding values to context and sharing between middlewares.
+- `SetParamsKey` function for setting a key for retrieving params.
 
 ### Changed
-- `ParamsKey` is not longer set by default and is now an `interface{}`.
+- `ParamsKey` is now not exported and can only be set once via `SetParamsKey` function.
 
 ## [0.9.0] - 2018-01-29
 ### Added
