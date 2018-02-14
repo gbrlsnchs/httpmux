@@ -7,6 +7,10 @@ import (
 	"github.com/gbrlsnchs/radix"
 )
 
+// ParamsKey is the value for used for
+// retrieving the parameters map in a Context.
+var ParamsKey interface{}
+
 // Router is a router that implements a http.Handler.
 type Router struct {
 	prefix  string
