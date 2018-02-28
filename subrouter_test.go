@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	. "github.com/gbrlsnchs/httpmux"
+	. "github.com/gbrlsnchs/httpmux/internal"
 )
 
 func TestEmptySubrouter(t *testing.T) {
@@ -39,7 +40,7 @@ func TestSubrouterHandle(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	subr := NewSubrouter()
 	rt := NewRouter()
-	h := &handlerMockup{status: expectedStatus, response: expectedResponse}
+	h := &DummyHandler{Status: expectedStatus, Response: expectedResponse}
 
 	subr.Handle(http.MethodGet, "/", h)
 	rt.Use(subr)
@@ -55,7 +56,7 @@ func TestSubrouterHandle(t *testing.T) {
 		t.Errorf("%x is not expected response (%x)\n", body, expectedResponse)
 	}
 
-	if !h.finished {
+	if !h.Finished {
 		t.Error("http.Handler has not run")
 	}
 }
@@ -67,7 +68,7 @@ func TestSubrouterHandleFunc(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	subr := NewSubrouter()
 	rt := NewRouter()
-	h := &handlerMockup{status: expectedStatus, response: expectedResponse}
+	h := &DummyHandler{Status: expectedStatus, Response: expectedResponse}
 
 	subr.HandleFunc(http.MethodGet, "/", h.ServeHTTP)
 	rt.Use(subr)
@@ -83,7 +84,7 @@ func TestSubrouterHandleFunc(t *testing.T) {
 		t.Errorf("%x is not expected response (%x)\n", body, expectedResponse)
 	}
 
-	if !h.finished {
+	if !h.Finished {
 		t.Error("http.HandlerFunc has not run")
 	}
 }
@@ -95,7 +96,7 @@ func TestSubrouterWithCancel(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	subr := NewSubrouter()
 	rt := NewRouter()
-	h := &handlerMockup{status: expectedStatus, response: expectedResponse}
+	h := &DummyHandler{Status: expectedStatus, Response: expectedResponse}
 
 	subr.HandleMiddlewares(http.MethodGet, "/", h.Cancel, h.ServeHTTP)
 	rt.Use(subr)
@@ -111,11 +112,11 @@ func TestSubrouterWithCancel(t *testing.T) {
 		t.Errorf("%x is not expected response (%x)\n", body, expectedResponse)
 	}
 
-	if !h.canceled {
+	if !h.Canceled {
 		t.Error("http.HandlerFunc has not been canceled")
 	}
 
-	if h.finished {
+	if h.Finished {
 		t.Error("http.HandlerFunc has run")
 	}
 }
@@ -127,9 +128,10 @@ func TestSubrouterHandleWithParams(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/123/456", nil)
 	subr := NewSubrouter()
 	rt := NewRouter()
-	h := &handlerMockup{status: expectedStatus, returnParams: true}
+	h := &DummyHandler{Status: expectedStatus, ReturnParams: true}
 
 	subr.Handle(http.MethodGet, "/:foo/:bar", h)
+	rt.SetParamsKey(ParamsKey)
 	rt.Use(subr)
 	rt.ServeHTTP(w, r)
 
@@ -148,7 +150,7 @@ func TestSubrouterHandleWithParams(t *testing.T) {
 		t.Errorf("%v is not expected response (%v)\n", actualResponse, expectedResponse)
 	}
 
-	if !h.finished {
+	if !h.Finished {
 		t.Error("http.Handler has not run")
 	}
 }

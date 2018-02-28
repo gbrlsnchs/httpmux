@@ -6,11 +6,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Added
-- `SetLocal` function for adding values to context and sharing between middlewares.
-- `SetParamsKey` function for setting a key for retrieving params.
+- `SetLocal` helper function for adding values to context and sharing between middlewares.
+- `internal` package with dummy data.
+- `Router`-scoped parameters context key support.
 
-### Changed
-- `ParamsKey` is now not exported and can only be set once via `SetParamsKey` function.
+### Removed
+- Mock-up in favor of `internal` package.
 
 ## [0.9.0] - 2018-01-29
 ### Added

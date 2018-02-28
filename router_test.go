@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	. "github.com/gbrlsnchs/httpmux"
+	. "github.com/gbrlsnchs/httpmux/internal"
 )
 
 func TestEmptyRouter(t *testing.T) {
@@ -37,7 +38,7 @@ func TestRouterHandle(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	rt := NewRouter()
-	h := &handlerMockup{status: expectedStatus, response: expectedResponse}
+	h := &DummyHandler{Status: expectedStatus, Response: expectedResponse}
 
 	rt.Handle(http.MethodGet, "/", h)
 	rt.ServeHTTP(w, r)
@@ -52,7 +53,7 @@ func TestRouterHandle(t *testing.T) {
 		t.Errorf("%x is not expected response (%x)\n", body, expectedResponse)
 	}
 
-	if !h.finished {
+	if !h.Finished {
 		t.Error("http.Handler has not run")
 	}
 }
@@ -63,7 +64,7 @@ func TestRouterHandleFunc(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	rt := NewRouter()
-	h := &handlerMockup{status: expectedStatus, response: expectedResponse}
+	h := &DummyHandler{Status: expectedStatus, Response: expectedResponse}
 
 	rt.HandleFunc(http.MethodGet, "/", h.ServeHTTP)
 	rt.ServeHTTP(w, r)
@@ -78,7 +79,7 @@ func TestRouterHandleFunc(t *testing.T) {
 		t.Errorf("%x is not expected response (%x)\n", body, expectedResponse)
 	}
 
-	if !h.finished {
+	if !h.Finished {
 		t.Error("http.HandlerFunc has not run")
 	}
 }
@@ -89,7 +90,7 @@ func TestRouterWithCancel(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	rt := NewRouter()
-	h := &handlerMockup{status: expectedStatus, response: expectedResponse}
+	h := &DummyHandler{Status: expectedStatus, Response: expectedResponse}
 
 	rt.HandleMiddlewares(http.MethodGet, "/", h.Cancel, h.ServeHTTP)
 	rt.ServeHTTP(w, r)
@@ -104,11 +105,11 @@ func TestRouterWithCancel(t *testing.T) {
 		t.Errorf("%x is not expected response (%x)\n", body, expectedResponse)
 	}
 
-	if !h.canceled {
+	if !h.Canceled {
 		t.Error("http.HandlerFunc has not been canceled")
 	}
 
-	if h.finished {
+	if h.Finished {
 		t.Error("http.HandlerFunc has run")
 	}
 }
@@ -119,8 +120,9 @@ func TestRouterHandleWithParams(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/123/456", nil)
 	rt := NewRouter()
-	h := &handlerMockup{status: expectedStatus, returnParams: true}
+	h := &DummyHandler{Status: expectedStatus, ReturnParams: true}
 
+	rt.SetParamsKey(ParamsKey)
 	rt.Handle(http.MethodGet, "/:foo/:bar", h)
 	rt.ServeHTTP(w, r)
 
@@ -139,7 +141,7 @@ func TestRouterHandleWithParams(t *testing.T) {
 		t.Errorf("%v is not expected response (%v)\n", actualResponse, expectedResponse)
 	}
 
-	if !h.finished {
+	if !h.Finished {
 		t.Error("http.Handler has not run")
 	}
 }
@@ -150,7 +152,7 @@ func TestRouterHandleWithCommon(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	rt := NewRouter()
-	h := &handlerMockup{status: expectedStatus, response: expectedResponse}
+	h := &DummyHandler{Status: expectedStatus, Response: expectedResponse}
 
 	rt.SetCommon(
 		func(_ http.ResponseWriter, _ *http.Request) {},
@@ -169,7 +171,7 @@ func TestRouterHandleWithCommon(t *testing.T) {
 		t.Errorf("%x is not expected response (%x)\n", body, expectedResponse)
 	}
 
-	if !h.finished {
+	if !h.Finished {
 		t.Error("http.Handler has not run")
 	}
 }
@@ -180,7 +182,7 @@ func TestRouterHandleFuncWithCommon(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	rt := NewRouter()
-	h := &handlerMockup{status: expectedStatus, response: expectedResponse}
+	h := &DummyHandler{Status: expectedStatus, Response: expectedResponse}
 
 	rt.SetCommon(
 		func(_ http.ResponseWriter, _ *http.Request) {},
@@ -199,7 +201,7 @@ func TestRouterHandleFuncWithCommon(t *testing.T) {
 		t.Errorf("%x is not expected response (%x)\n", body, expectedResponse)
 	}
 
-	if !h.finished {
+	if !h.Finished {
 		t.Error("http.HandlerFunc has not run")
 	}
 }
