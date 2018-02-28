@@ -12,6 +12,7 @@ type Router struct {
 	prefix  string
 	methods map[string]*radix.Tree
 	common  []interface{}
+	ctxKey  interface{}
 }
 
 // NewRouter creates and initializes a new Router.
@@ -76,8 +77,8 @@ func (rt *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if n != nil {
 		tnode := n.Value.(*node)
 
-		if len(p) > 0 && paramsKey != nil {
-			r = r.WithContext(context.WithValue(r.Context(), paramsKey, p))
+		if len(p) > 0 && rt.ctxKey != nil {
+			r = r.WithContext(context.WithValue(r.Context(), rt.ctxKey, p))
 		}
 
 		for i := 0; i < tnode.len; i++ {
@@ -115,6 +116,14 @@ func (rt *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // SetCommon sets middlewares that run for all endpoints.
 func (rt *Router) SetCommon(mids ...interface{}) {
 	rt.common = mids
+}
+
+// SetParamsKey sets a key for retrieving URL parameters
+// only once, for avoiding unwanted manipulation.
+func (rt *Router) SetParamsKey(v interface{}) {
+	if rt.ctxKey == nil {
+		rt.ctxKey = v
+	}
 }
 
 // Use registers a Subrouter to be used by the Router.
