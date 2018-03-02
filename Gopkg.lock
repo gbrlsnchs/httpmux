@@ -10,8 +10,8 @@
 [[projects]]
   name = "github.com/gbrlsnchs/radix"
   packages = ["."]
-  revision = "de4d2fa77d70c7beea2e7a73cc243e16124dc8a0"
-  version = "v0.4.3"
+  revision = "f58545455fb3cf844b9b1901a852a9f4526e8d18"
+  version = "v0.4.5"
 
 [[projects]]
   name = "github.com/mattn/go-colorable"
@@ -29,7 +29,7 @@
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "f6cff0780e542efa0c8e864dc8fa522808f6a598"
+  revision = "dd2ff4accc098aceecb86b36eaa7829b2a17b1c9"
 
 [solve-meta]
   analyzer-name = "dep"

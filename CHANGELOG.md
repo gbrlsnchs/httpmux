@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.10.2] - 2018-03-02
+### Fixed
+- Updated dependencies, which include hotfixes.
+
 ## [0.10.1] - 2018-03-01
 ### Fixed
 - Example in the README file.
@@ -67,7 +71,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - New test cases.
 
 ### Fixed
-- `Subrouter.Use` now correctly spreads handlers to the parent subrouter's handlers slice.
+- `(*Subrouter).Use` now correctly spreads handlers to the parent subrouter's handlers slice.
 
 ## [0.4.0] - 2017-12-17
 ### Added
@@ -90,11 +94,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [0.3.0] - 2017-11-11
 ### Added
-- Submux.
+- `Submux`.
 - PATRICIA tree algorithm to resolve the HTTP requests.
 
 ### Changed
-- Mux's design.
+- `Mux`'s design.
 - Example.
 - Update this file to use "changelog" in lieu of "change log".
 
@@ -120,6 +124,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - This package's source code, including examples and tests.
 - Go dep files.
 
+[0.10.2]: https://github.com/gbrlsnchs/httpmux/compare/v0.10.1...v0.10.2
 [0.10.1]: https://github.com/gbrlsnchs/httpmux/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/gbrlsnchs/httpmux/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/gbrlsnchs/httpmux/compare/v0.8.0...v0.9.0
