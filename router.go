@@ -186,4 +186,5 @@ func (rt *Router) add(m, p string, mids []interface{}) {
 	}
 
 	rt.methods[m].Add(p, n)
+	rt.methods[m].Sort(radix.PrioritySort)
 }
