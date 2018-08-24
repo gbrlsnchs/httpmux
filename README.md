@@ -1,3 +1,5 @@
+# DEPRECATED (and archived): use [mux](https://github.com/gbrlsnchs/mux) instead!
+
 # httpmux (HTTP request multiplexer)
 [![Build Status](https://travis-ci.org/gbrlsnchs/httpmux.svg?branch=master)](https://travis-ci.org/gbrlsnchs/httpmux)
 [![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg)](https://godoc.org/github.com/gbrlsnchs/httpmux)
